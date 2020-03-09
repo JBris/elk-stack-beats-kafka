@@ -221,6 +221,13 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       - zookeeper
+    labels:
+      - co.elastic.logs/module=kafka
+      - co.elastic.logs/fileset.stdout=access
+      - co.elastic.logs/fileset.stderr=error
+      - co.elastic.metrics/module=kafka
+      - co.elastic.metrics/metricsets=consumergroup 
+      - co.elastic.metrics/hosts='kafka:9092'
 
   redis:
     image: redis:$REDIS_TAG
