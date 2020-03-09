@@ -198,7 +198,22 @@ services:
   #   container_name: "${PROJECT_NAME}_kafka"
   #   stop_grace_period: 60s
     # restart: always
-    
+
+  redis:
+    image: redis:$REDIS_TAG
+    container_name: "${PROJECT_NAME}_redis"
+    stop_grace_period: 60s
+    restart: always
+    ports:
+      - ${REDIS_PORT}:6379
+    labels:
+      - co.elastic.logs/module=redis
+      - co.elastic.logs/fileset.stdout=access
+      - co.elastic.logs/fileset.stderr=error
+      - co.elastic.metrics/module=redis
+      - co.elastic.metrics/metricsets=info 
+      - co.elastic.metrics/hosts='redis:6379'
+
   adminer:
     image: adminer:$ADMINER_TAG
     container_name: "${PROJECT_NAME}_adminer"
