@@ -193,11 +193,34 @@ services:
       - elasticsearch
       - kibana
 
-  # kafka:
-  #   image: wurstmeister/kafka:$KAFKA_TAG
-  #   container_name: "${PROJECT_NAME}_kafka"
-  #   stop_grace_period: 60s
-    # restart: always
+  zookeeper:
+    image: zookeeper:$ZOOKEEPER_TAG
+    container_name: "${PROJECT_NAME}_zookeeper"
+    ports:
+      - ${ZOOKEEPER_PORT}:2181
+      - ${ZOOKEEPER_ADMIN_PORT}:8080 
+    labels:
+      - co.elastic.metrics/module=zookeeper
+      - co.elastic.metrics/metricsets=mntr 
+      - co.elastic.metrics/hosts='zookeeper:2181'
+
+  kafka:
+    image: wurstmeister/kafka:$KAFKA_TAG
+    container_name: "${PROJECT_NAME}_kafka"
+    stop_grace_period: 60s
+    restart: always
+    command: [start-kafka.sh]
+    ports:
+      - ${KAFKA_PORT}:9092
+    environment:
+      KAFKA_CREATE_TOPICS: "UploadFile:1:1,GetFile:1:1,TrackUpload:1:1,GetEmailContent:1:1" # topic:partition:replicas
+      KAFKA_ADVERTISED_HOST_NAME: kafka  
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_PORT: 9092
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - zookeeper
 
   redis:
     image: redis:$REDIS_TAG
