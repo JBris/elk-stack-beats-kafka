@@ -1,0 +1,142 @@
+version: "3.5"
+
+services:
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:$ELASTICSEARCH_TAG
+    container_name: "${PROJECT_NAME}_elasticsearch"
+    stop_grace_period: 60s
+    restart: always
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - ${ELASTICSEARCH_REST_PORT}:9200
+      - ${ELASTICSEARCH_NODE_PORT}:9300
+    environment:
+      - $ES_JAVA_OPTS
+      - $DISCOVERY_TYPE
+      - $BOOTSTRAP_MEMORY_LOCK
+      - $ELASTICSEARCH_CLUSTER_NAME
+      #- $ELASTICSEARCH_NODE_NAME_MASTER
+      #- $ELASTICSEARCH_CLUSTER_INITIAL_MASTER_NODES
+    labels:
+      - co.elastic.metrics/module=elasticsearch
+      - co.elastic.metrics/metricsets=node_stats 
+      - co.elastic.metrics/hosts='elasticsearch:9200'
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:$KIBANA_TAG
+    container_name: "${PROJECT_NAME}_kibana"
+    stop_grace_period: 60s
+    restart: always
+    environment:
+      - "ELASTICSEARCH_URL=http://elasticsearch:9200"
+    depends_on:
+      - elasticsearch
+    ports:
+      - ${KIBANA_PORT}:5601
+    labels:
+      - "traefik.http.services.${PROJECT_NAME}_kibana.loadbalancer.server.port=5601"
+      - "traefik.http.routers.${PROJECT_NAME}_kibana.rule=Host(`kibana.${PROJECT_BASE_URL}`)"
+      - co.elastic.metrics/module=kibana
+      - co.elastic.metrics/metricsets=stats 
+      - co.elastic.metrics/hosts='kibana:5601'
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:$LOGSTASH_TAG
+    container_name: "${PROJECT_NAME}_logstash"
+    stop_grace_period: 60s
+    restart: always
+    depends_on:
+      - kibana
+    ports:
+      - ${LOGSTASH_PORT}:9600
+    labels:
+      - "traefik.http.services.${PROJECT_NAME}_logstash.loadbalancer.server.port=5601"
+      - "traefik.http.routers.${PROJECT_NAME}_logstash.rule=Host(`logstash.${PROJECT_BASE_URL}`)"
+      - co.elastic.metrics/module=logstash
+      - co.elastic.metrics/metricsets=node_stats 
+      - co.elastic.metrics/hosts='logstash:9600'
+
+  metricbeat:
+    image: docker.elastic.co/beats/metricbeat:$METRICBEAT_TAG
+    container_name: "${PROJECT_NAME}_metricbeat"
+    stop_grace_period: 60s
+    restart: always
+    environment:
+      - $SETUP_KIBANA_HOST
+      - $OUTPUT_ELASTICSEARCH_HOSTS
+    ports:
+      - ${METRICBEAT_PORT}:80
+    labels:
+      - co.elastic.metrics/module=beat
+      - co.elastic.metrics/metricsets=stats 
+      - co.elastic.metrics/hosts='metricbeat:80'
+
+  auditbeat:
+    image: docker.elastic.co/beats/auditbeat:$AUDITBEAT_TAG
+    container_name: "${PROJECT_NAME}_auditbeat"
+    stop_grace_period: 60s
+    restart: always
+    cap_add:
+      - AUDIT_CONTROL
+      - AUDIT_READ
+    pid: "host"
+    environment:
+      - $SETUP_KIBANA_HOST
+      - $OUTPUT_ELASTICSEARCH_HOSTS
+    ports:
+      - ${AUDITBEAT_PORT}:80
+    labels:
+      - co.elastic.metrics/module=beat
+      - co.elastic.metrics/metricsets=stats 
+      - co.elastic.metrics/hosts='auditbeat:80'
+
+  # kafka:
+  #   image: wurstmeister/kafka:$KAFKA_TAG
+  #   container_name: "${PROJECT_NAME}_kafka"
+  #   stop_grace_period: 60s
+    # restart: always
+    
+  adminer:
+    image: adminer:$ADMINER_TAG
+    container_name: "${PROJECT_NAME}_adminer"
+    stop_grace_period: 60s
+    restart: always
+    ports:
+      - ${ADMINER_PORT}:8080
+
+  portainer:
+    image: portainer/portainer:$PORTAINER_TAG
+    container_name: "${PROJECT_NAME}_portainer"
+    command: --no-auth -H unix:///var/run/docker.sock
+    stop_grace_period: 60s
+    restart: always
+    ports:
+      - ${PORTAINER_PORT}:9000
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    labels:
+      - "traefik.http.routers.${PROJECT_NAME}_portainer.rule=Host(`portainer.${PROJECT_BASE_URL}`)"
+
+  traefik:
+    image: traefik:$TRAEFIK_TAG
+    container_name: "${PROJECT_NAME}_traefik"
+    command: --api.insecure=true --providers.docker=true
+    stop_grace_period: 60s
+    restart: always
+    ports:
+      - ${TRAEFIK_PORT}:80
+      - ${TRAEFIK_DASHBOARD_PORT}:8080
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    labels:
+      - co.elastic.metrics/module=traefik
+      - co.elastic.metrics/metricsets=health 
+      - co.elastic.metrics/hosts='traefik:80'
+
+networks:
+  default:
+      name: elk_stack_beats_kafka
