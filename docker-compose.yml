@@ -136,7 +136,7 @@ services:
     stop_grace_period: 60s
     restart: always
     user: root
-    network_mode: host
+    # network_mode: host
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     cap_add:
@@ -159,7 +159,7 @@ services:
     stop_grace_period: 60s
     restart: always
     user: root
-    network_mode: host
+    # network_mode: host
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     cap_add:
