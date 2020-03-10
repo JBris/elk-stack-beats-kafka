@@ -55,8 +55,6 @@ services:
     container_name: "${PROJECT_NAME}_logstash"
     stop_grace_period: 60s
     restart: always
-    depends_on:
-      - kibana
     ports:
       - ${LOGSTASH_PORT}:9600
     labels:
@@ -178,20 +176,20 @@ services:
       - co.elastic.metrics/metricsets=stats 
       - co.elastic.metrics/hosts='heartbeat:80'
 
-  configure_stack: #https://github.com/elastic/examples/blob/master/Miscellaneous/docker/full_stack_example/docker-compose-linux.yml
-    container_name: ${PROJECT_NAME}_configure_stack
-    image: docker.elastic.co/beats/metricbeat:${ELASTICSEARCH_TAG}
-    volumes:
-      - ./init/configure-stack.sh:/usr/local/bin/configure-stack.sh:ro
-      - ./init/pipelines/:/usr/local/bin/pipelines/
-      - ./init/templates/:/usr/local/bin/templates/
-    command: ['/bin/bash', '-c', 'cat /usr/local/bin/configure-stack.sh | tr -d "\r" | bash']
-    environment: 
-      ELASTIC_VERSION: ${ELASTICSEARCH_TAG}
-      DEFAULT_INDEX_PATTERN: $DEFAULT_INDEX_PATTERN
-    depends_on:
-      - elasticsearch
-      - kibana
+  # # configure_stack: #https://github.com/elastic/examples/blob/master/Miscellaneous/docker/full_stack_example/docker-compose-linux.yml
+  # #   container_name: ${PROJECT_NAME}_configure_stack
+  # #   image: docker.elastic.co/beats/metricbeat:${ELASTICSEARCH_TAG}
+  # #   volumes:
+  # #     - ./init/configure-stack.sh:/usr/local/bin/configure-stack.sh:ro
+  # #     - ./init/pipelines/:/usr/local/bin/pipelines/
+  # #     - ./init/templates/:/usr/local/bin/templates/
+  # #   command: ['/bin/bash', '-c', 'cat /usr/local/bin/configure-stack.sh | tr -d "\r" | bash']
+  # #   environment: 
+  # #     ELASTIC_VERSION: ${ELASTICSEARCH_TAG}
+  # #     DEFAULT_INDEX_PATTERN: $DEFAULT_INDEX_PATTERN
+  # #   depends_on:
+  # #     - elasticsearch
+  # #     - kibana
 
   zookeeper:
     image: zookeeper:$ZOOKEEPER_TAG
